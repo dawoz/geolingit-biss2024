@@ -2,3 +2,4 @@
 GeoLingIt
 out
 tmp_*.json
+wandb
