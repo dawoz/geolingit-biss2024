@@ -1,5 +1,4 @@
 # Ignore dataset folder so it doesn't get uploaded on this public repo
 GeoLingIt
 out
-LLaMinerva
 tmp_*.json
