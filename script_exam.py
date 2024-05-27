@@ -47,7 +47,6 @@
 # - input text
 # - expected output
 
-
 # %%
 import random
 from os.path import isdir
@@ -81,6 +80,7 @@ warnings.filterwarnings('ignore')
 # %%
 relPath = '.'
 TASK = "geolingit"
+MODEL = "LLaMA"
 TRAIN_DEV_SPLIT = 0.05
 
 random.seed(23)
@@ -155,7 +155,7 @@ encode()
 # Let's open the newly created file and see what's inside
 
 # %%
-with open(f"out/geolingit/train.txt", "r") as f:
+with open(f"out/{TASK}/train.txt", "r") as f:
   lines = f.readlines()
   print(lines[0])
   print(lines[8])
@@ -245,12 +245,16 @@ def generate_prompt(data_point):
 
 # %%
 DEVICE = "cuda"
-TOKENIZER_MODEL = "yahma/llama-7b-hf"
-BASE_MODEL = "sag-uniroma2/extremITA-Camoscio-7b"
+if MODEL == "LLaMA":
+    TOKENIZER_MODEL = "yahma/llama-7b-hf"
+    BASE_MODEL = "sag-uniroma2/extremITA-Camoscio-7b"
+elif MODEL == "MINERVA": 
+    TOKENIZER_MODEL = "yahma/llama-7b-hf"
+    BASE_MODEL = "sag-uniroma2/extremITA-Camoscio-7b"
 
 input_train_path = f"out/{TASK}/train.txt"
 input_dev_path = f"out/{TASK}/dev.txt"
-OUTPUT_DIR = f"LLaMinerva"
+OUTPUT_DIR = f"LLaMinerva/{MODEL}"
 
 CUTOFF_LEN = 512
 CUT_INPUT_CHAR_LENGTH = 1200
@@ -267,8 +271,8 @@ LORA_TARGET_MODULES = [
     "o_proj",
 ]
 
-EPOCHS = 2 # better 2 epochs
-BATCH_SIZE = 64 #it would be better 128 but it may require too much GPU memory (original 32)
+EPOCHS = 10 # better 2 epochs
+BATCH_SIZE = 32 #it would be better 128 but it may require too much GPU memory (original 32)
 MICRO_BATCH_SIZE = 16 #it would be better 32 but it may require too much GPU memory (original 8)
 GRADIENT_ACCUMULATION_STEPS = BATCH_SIZE // MICRO_BATCH_SIZE
 LEARNING_RATE = 3e-4
@@ -482,6 +486,7 @@ training_arguments = transformers.TrainingArguments(
     save_strategy="epoch",
     output_dir=OUTPUT_DIR,
     save_total_limit=1,
+    metric_for_best_model="eval_loss",
     load_best_model_at_end=True,
     label_names=["labels"]
 )
@@ -522,5 +527,12 @@ if torch.__version__ >= "2":
 trainer.train()
 
 model.save_pretrained(OUTPUT_DIR)
+
+# %%
+#import gc
+#import torch
+#del model
+#gc.collect()
+#torch.cuda.empty_cache()
 
 
