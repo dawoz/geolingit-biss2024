@@ -56,7 +56,7 @@ import re
 import csv
 import math
 import transformers
-from transformers import LlamaTokenizer, LlamaForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import csv
 import json
 
@@ -80,7 +80,7 @@ warnings.filterwarnings('ignore')
 # %%
 relPath = '.'
 TASK = "geolingit"
-MODEL = "LLaMA"
+MODEL = "ANITA"
 TRAIN_DEV_SPLIT = 0.05
 
 random.seed(23)
@@ -248,9 +248,9 @@ DEVICE = "cuda"
 if MODEL == "LLaMA":
     TOKENIZER_MODEL = "yahma/llama-7b-hf"
     BASE_MODEL = "sag-uniroma2/extremITA-Camoscio-7b"
-elif MODEL == "MINERVA": 
-    TOKENIZER_MODEL = "yahma/llama-7b-hf"
-    BASE_MODEL = "sag-uniroma2/extremITA-Camoscio-7b"
+elif MODEL == "ANITA": 
+    TOKENIZER_MODEL = "swap-uniba/LLaMAntino-3-ANITA-8B-Inst-DPO-ITA"
+    BASE_MODEL = "swap-uniba/LLaMAntino-3-ANITA-8B-Inst-DPO-ITA"
 
 input_train_path = f"out/{TASK}/train.txt"
 input_dev_path = f"out/{TASK}/dev.txt"
@@ -273,7 +273,7 @@ LORA_TARGET_MODULES = [
 
 EPOCHS = 10 # better 2 epochs
 BATCH_SIZE = 32 #it would be better 128 but it may require too much GPU memory (original 32)
-MICRO_BATCH_SIZE = 16 #it would be better 32 but it may require too much GPU memory (original 8)
+MICRO_BATCH_SIZE = 8 #it would be better 32 but it may require too much GPU memory (original 8)
 GRADIENT_ACCUMULATION_STEPS = BATCH_SIZE // MICRO_BATCH_SIZE
 LEARNING_RATE = 3e-4
 WARMUP_RATIO = 0.1
@@ -293,7 +293,7 @@ tmp_dev_file_name = "tmp_dev.json"
 #               FUNCTIONS
 #============================================
 
-tokenizer = LlamaTokenizer.from_pretrained(TOKENIZER_MODEL)
+tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_MODEL)
 
 #LOAD INPUT TSV files in the extremITA format
 def load(input_file_path):
@@ -423,21 +423,21 @@ bits = "4" #@param ["4", "8", "full"]
 #-------------------
 # base model here, choose between 4, 8 bits or full precision
 if bits == "8":
-  model = LlamaForCausalLM.from_pretrained(
+  model = AutoModelForCausalLM.from_pretrained(
       BASE_MODEL,
       load_in_8bit=True,
       torch_dtype=torch.float16,
       device_map="auto",
   )
 elif bits == "4":
-  model = LlamaForCausalLM.from_pretrained(
+  model = AutoModelForCausalLM.from_pretrained(
       BASE_MODEL,
       load_in_4bit=True,
       torch_dtype=torch.float16,
       device_map="auto",
   )
 else:
-  model = LlamaForCausalLM.from_pretrained(
+  model = AutoModelForCausalLM.from_pretrained(
       BASE_MODEL,
       torch_dtype=torch.float16,
       device_map="auto",
@@ -458,6 +458,10 @@ tokenizer.padding_side = "left"
 # PREPARE DATA
 train_data = ( json_train["train"].shuffle().map(generate_and_tokenize_prompt) )
 val_data = ( json_dev["train"].shuffle().map(generate_and_tokenize_prompt) )
+
+# To reduce GPU memory usage
+if MODEL == "ANITA":
+   model.gradient_checkpointing_enable()
 
 # PREPARE MODEL and add the LoRA modules
 model = prepare_model_for_kbit_training(model)
