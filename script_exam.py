@@ -59,6 +59,7 @@ import transformers
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import csv
 import json
+from huggingface_hub import login
 
 from peft import (
     LoraConfig,
@@ -80,10 +81,19 @@ warnings.filterwarnings('ignore')
 # %%
 relPath = '.'
 TASK = "geolingit"
-DATASET = "GeoLingIt-mod" # folder where the dataset is located
-MODEL = "LLaMA" # model type 'LLaMA' or 'ANITA'
+DATASET = "GeoLingIt" # folder where the dataset is located
+MODEL = "MINERVA" # model type 'LLaMA' or 'ANITA' or 'MINERVA'
 
 random.seed(23)
+
+# %% [markdown]
+# Login to access to the MINERVA model (read the access token from the secret.txt file)
+
+# %%
+if MODEL == 'MINERVA':
+    with open(f"secret.txt", mode="r", encoding="utf-8") as scrF:
+        secret_token = scrF.readline()
+        login(secret_token)
 
 # %% [markdown]
 # # How to generate the dataset
@@ -247,6 +257,9 @@ if MODEL == "LLaMA":
 elif MODEL == "ANITA": 
     TOKENIZER_MODEL = "swap-uniba/LLaMAntino-3-ANITA-8B-Inst-DPO-ITA"
     BASE_MODEL = "swap-uniba/LLaMAntino-3-ANITA-8B-Inst-DPO-ITA"
+elif MODEL == 'MINERVA':
+    TOKENIZER_MODEL = "sapienzanlp/Minerva-3B-base-v1.0"
+    BASE_MODEL = "sapienzanlp/Minerva-3B-base-v1.0"
 
 input_train_path = f"out/{DATASET}/train.txt"
 input_dev_path = f"out/{DATASET}/dev.txt"
@@ -267,9 +280,9 @@ LORA_TARGET_MODULES = [
     "o_proj",
 ]
 
-EPOCHS = 10 # better 2 epochs
-BATCH_SIZE = 32 #it would be better 128 but it may require too much GPU memory (original 32)
-MICRO_BATCH_SIZE = 8 #it would be better 32 but it may require too much GPU memory (original 8)
+EPOCHS = 10 # better 10 epochs
+BATCH_SIZE = 64 #it would be better 128 but it may require too much GPU memory (original 32 for LLaMA and ANITA)
+MICRO_BATCH_SIZE = 32 #it would be better 32 but it may require too much GPU memory (original 8 for LLaMA and ANITA)
 GRADIENT_ACCUMULATION_STEPS = BATCH_SIZE // MICRO_BATCH_SIZE
 LEARNING_RATE = 3e-4
 WARMUP_RATIO = 0.1
