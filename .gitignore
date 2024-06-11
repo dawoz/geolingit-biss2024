@@ -1,5 +1,7 @@
 # Ignore dataset folder so it doesn't get uploaded on this public repo
-GeoLingIt
+/GeoLingIt
+/GeoLingIt-mod
 out
 tmp_*.json
 wandb
+secret.txt
