@@ -8,7 +8,6 @@
 # - Step 1 - Encoding the data
 # - Step 2 - Training the models
 # - Step 3 - Inference: generating answers
-# - Step 4 - Deconding the data
 
 # %% [markdown]
 # ## Step 1 - Encoding the data
@@ -16,27 +15,6 @@
 # In this Notebook we will see the encoding part of the data, given that we have some datasets each of which in its own format, in order to transform it into a sequence to sequence format. We will save the data on a file for next steps.
 
 # %% [markdown]
-# # The workflow
-# 
-# In EVALITA we have a lot of datasets (22 tasks), each of which in a different format. The annotated data consists of a straightforward tab-delimited text file:
-# 
-# 
-# ```
-# <DOCID>|t|<TEXT>
-# <DOCID>  REL  <RML_START>-<RML_END>  <EVENT_START>-<EVENT_END>  <RML_TEXT>  <EVENT_TEXT>
-# <DOCID>  REL  <RML_START>-<RML_END>  <EVENT_START>-<EVENT_END>  <RML_TEXT>  <EVENT_TEXT>
-# 
-# <DOCID>|t|<TEXT>
-# <DOCID>  REL  <RML_START>-<RML_END>  <EVENT_START>-<EVENT_END>  <RML_TEXT>  <EVENT_TEXT>
-# ```
-# 
-# The **objective** here is to transform this data for the LLaMA model, so we need to:
-# 1. Transform data into sequence-to-sequence format, in order to feed it to the LLaMA model:  
-#   a. Read original data with pandas  
-#   b. Take the text after `|t|` and save it  
-#   c. Parse every relation `REL` into a sequence
-# 2. Save it on file
-# 
 # ## Input
 # The "input" of the Notebook is a file in the PubTator format, as given from the challenge.
 # 
@@ -82,7 +60,7 @@ warnings.filterwarnings('ignore')
 relPath = '.'
 TASK = "geolingit"
 DATASET = "GeoLingIt" # folder where the dataset is located
-MODEL = "MINERVA" # model type 'LLaMA' or 'ANITA' or 'MINERVA'
+MODEL = "LLaMA" # model type 'LLaMA' or 'ANITA' or 'MINERVA'
 
 random.seed(23)
 
@@ -96,10 +74,7 @@ if MODEL == 'MINERVA':
         login(secret_token)
 
 # %% [markdown]
-# # How to generate the dataset
-# 
-# Once you have collected all the data you can encode them into the dataset format for our model, using the `encode` function.  
-# [On our Github repository](https://github.com/crux82/ExtremITA/tree/main/tasks) you can find all the others, but we report the `encoder` only for the CLinkaRT task:
+# # Dataset generation
 
 # %%
 nlp = spacy.load("it_core_news_sm", disable=["lemmatizer", "tagger"])
@@ -143,7 +118,7 @@ def encode():
 
 
 # %% [markdown]
-# It will generate a file for the task. In order to fine-tune the model you should merge them into one single file and split them into `train.txt` and `dev.txt`. Here we will use a subset of the training, with 100 examples per task.  
+# It will generate a file for the task. In order to fine-tune the model you should merge them into one single file and split them into `train.txt` and `dev.txt`.
 # These files are made of 4 columns (with a tab character as a delimiter) without any header:
 # - id
 # - task name, from which the natural language task description is generated
@@ -281,8 +256,8 @@ LORA_TARGET_MODULES = [
 ]
 
 EPOCHS = 10 # better 10 epochs
-BATCH_SIZE = 64 #it would be better 128 but it may require too much GPU memory (original 32 for LLaMA and ANITA)
-MICRO_BATCH_SIZE = 32 #it would be better 32 but it may require too much GPU memory (original 8 for LLaMA and ANITA)
+BATCH_SIZE = 32 #it would be better 128 but it may require too much GPU memory (original 32 for LLaMA and ANITA, but 64 for MINERVA)
+MICRO_BATCH_SIZE = 8 #it would be better 32 but it may require too much GPU memory (original 8 for LLaMA and ANITA, but 32 for MINERVA)
 GRADIENT_ACCUMULATION_STEPS = BATCH_SIZE // MICRO_BATCH_SIZE
 LEARNING_RATE = 3e-4
 WARMUP_RATIO = 0.1
