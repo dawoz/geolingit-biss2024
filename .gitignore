@@ -4,5 +4,6 @@
 out
 tmp_*.json
 wandb
+img
 secret.txt
 LLaMinerva
